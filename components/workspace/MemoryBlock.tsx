@@ -1,0 +1,125 @@
+"use client";
+
+import { useState } from "react";
+import type { MemoryBlock as MemoryBlockType } from "@/lib/types";
+
+const CATEGORY_STYLES: Record<string, { label: string; bg: string; text: string; border: string }> = {
+  decisions: { label: "decision", bg: "rgba(255,255,255,0.04)", text: "#888888", border: "rgba(255,255,255,0.08)" },
+  features: { label: "feature", bg: "rgba(255,255,255,0.04)", text: "#888888", border: "rgba(255,255,255,0.08)" },
+  bugs: { label: "bug", bg: "rgba(245,101,101,0.08)", text: "#F56565", border: "rgba(245,101,101,0.15)" },
+  bugfixes: { label: "bugfix", bg: "rgba(62,207,142,0.07)", text: "#3ECF8E", border: "rgba(62,207,142,0.12)" },
+  code_snippets: { label: "code", bg: "rgba(255,255,255,0.04)", text: "#888888", border: "rgba(255,255,255,0.08)" },
+  todos: { label: "todo", bg: "rgba(255,255,255,0.04)", text: "#888888", border: "rgba(255,255,255,0.08)" },
+  ideas: { label: "idea", bg: "rgba(255,255,255,0.04)", text: "#888888", border: "rgba(255,255,255,0.08)" },
+  research: { label: "research", bg: "rgba(255,255,255,0.04)", text: "#888888", border: "rgba(255,255,255,0.08)" },
+  architecture: { label: "architecture", bg: "rgba(255,255,255,0.04)", text: "#888888", border: "rgba(255,255,255,0.08)" },
+  questions: { label: "question", bg: "rgba(255,255,255,0.04)", text: "#888888", border: "rgba(255,255,255,0.08)" },
+};
+
+const LABEL_TO_KEY: Record<string, keyof MemoryBlockType["extracted_data"]> = {
+  decision: "decisions",
+  feature: "features",
+  bug: "bugs",
+  bugfix: "bugfixes",
+  code: "code_snippets",
+  todo: "todos",
+};
+
+export default function MemoryBlock({ memory }: { memory: MemoryBlockType }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const activeCategories = Object.entries(CATEGORY_STYLES).filter(
+    ([key]) => memory.extracted_data?.[key as keyof typeof memory.extracted_data]?.length > 0
+  );
+
+  return (
+    <div
+      className={`rounded-[6px] border bg-[var(--bg2)] transition ${
+        expanded ? "border-[var(--text3)]" : "border-[var(--border)] hover:border-[var(--border2)]"
+      }`}
+    >
+      <button
+        onClick={() => setExpanded((e) => !e)}
+        className="flex w-full flex-col gap-2.5 p-4 text-left"
+      >
+        <div className="flex items-start gap-2.5">
+          <span
+            className="flex-shrink-0 rounded-[4px] px-2 py-[3px] font-mono text-[10px] font-semibold"
+            style={{ backgroundColor: "rgba(255,255,255,0.05)", color: "#666666" }}
+          >
+            {memory.ai_model}
+          </span>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-[13px] font-medium leading-snug text-[var(--text)]">
+              {memory.title}
+            </h3>
+            <p className="mt-1 text-[12px] leading-relaxed text-[var(--text2)]">
+              {memory.summary}
+            </p>
+            <p className="mt-2 font-mono text-[10px] text-[var(--text3)]">
+              {new Date(memory.created_at).toLocaleString()}
+            </p>
+          </div>
+        </div>
+
+        {activeCategories.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {activeCategories.map(([key, style]) => (
+              <span
+                key={key}
+                className="rounded-[4px] border px-2 py-[2px] font-mono text-[10px] font-medium"
+                style={{ backgroundColor: style.bg, color: style.text, borderColor: style.border }}
+              >
+                {style.label}
+              </span>
+            ))}
+          </div>
+        )}
+      </button>
+
+      {expanded && (
+        <div className="border-t border-[var(--border)] px-4 py-3.5">
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--text3)]">
+            Extracted knowledge
+          </p>
+          {activeCategories.map(([key, style]) => {
+            const items = memory.extracted_data[key as keyof typeof memory.extracted_data];
+            return (
+              <div key={key} className="border-b border-[var(--border)] py-1.5 last:border-none">
+                <div className="flex gap-2">
+                  <span
+                    className="min-w-[70px] flex-shrink-0 pt-px font-mono text-[10px] font-semibold uppercase tracking-wide"
+                    style={{ color: style.text }}
+                  >
+                    {style.label}
+                  </span>
+                  <div className="flex flex-col gap-1">
+                    {items.map((item, i) => (
+                      <span key={i} className="text-[12px] leading-relaxed text-[var(--text2)]">
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+
+          <p className="mb-2 mt-3.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--text3)]">
+            Raw conversation
+          </p>
+          <pre className="max-h-44 overflow-y-auto whitespace-pre-wrap rounded-[6px] border border-[var(--border)] bg-[var(--bg)] p-3 font-mono text-[11px] leading-relaxed text-[var(--text2)]">
+            {memory.raw_conversation}
+          </pre>
+        </div>
+      )}
+
+      <button
+        onClick={() => setExpanded((e) => !e)}
+        className="block w-full border-t border-[var(--border)] px-4 py-2 text-left text-[11px] text-[var(--text3)] hover:text-[var(--text2)]"
+      >
+        {expanded ? "▲ Collapse" : "▼ Show extracted knowledge & conversation"}
+      </button>
+    </div>
+  );
+}
