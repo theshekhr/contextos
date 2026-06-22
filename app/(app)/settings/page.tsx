@@ -319,6 +319,7 @@ export default function SettingsPage() {
             Generate a token to connect the ContextOS browser extension to your account. Paste it
             into the extension once \u2014 it stays valid until you revoke it here.
           </p>
+          <a href="https://contextos.web.app/extension.zip">Download Extension here (BETA)</a><br></br>
 
           {extensionToken ? (
             <div className="mt-4">
