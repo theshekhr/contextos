@@ -5,30 +5,41 @@
     let turns = [];
 
     if (SITE === "Claude") {
-      const userSelectors = '[data-testid="user-message"], .font-user-message';
-      const aiSelectors = '[data-testid="chat-message"], .font-claude-message';
-      const combined = `${userSelectors}, ${aiSelectors}`;
+      // The actual scrollable conversation column. Anything outside this
+      // container (sidebar, other extensions' injected UI, usage banners)
+      // is structurally excluded just by anchoring here.
+      const container = document.querySelector(
+        ".flex-1.flex.flex-col.px-4.max-w-3xl.mx-auto.w-full.pt-1"
+      );
 
-      const nodes = document.querySelectorAll(combined);
-      nodes.forEach((node) => {
-        const isUser = node.matches(userSelectors);
-        const text = node.innerText.trim();
-        if (text) turns.push(`${isUser ? "User" : "Claude"}: ${text}`);
-      });
+      if (container) {
+        Array.from(container.children).forEach((turn) => {
+          // User messages render inside a bubble with this background/shape.
+          // Claude's responses use a plain grid layout with no bubble.
+          const isUser = !!turn.querySelector(
+            ".bg-bg-300.rounded-xl.break-words.text-text-100"
+          );
+          const text = turn.innerText.trim();
+          if (text) turns.push(`${isUser ? "User" : "Claude"}: ${text}`);
+        });
+      }
 
-      // Fallback: known selectors matched nothing (DOM structure has likely
-      // changed). Grab the main conversation container's visible text instead
-      // of giving up entirely.
+      // Narrow fallback only, in case Claude.ai changes this structure again.
+      // Deliberately does NOT fall back to grabbing <main> or <body> wholesale,
+      // since that previously captured unrelated sidebar/extension content.
       if (turns.length === 0) {
-        const main =
-          document.querySelector("main") ||
-          document.querySelector('[role="main"]') ||
-          document.body;
-        const text = main.innerText.trim();
-        if (text) turns.push(text);
+        const userSelectors = '[data-testid="user-message"], .font-user-message';
+        const aiSelectors = '[data-testid="chat-message"], .font-claude-message';
+        const nodes = document.querySelectorAll(`${userSelectors}, ${aiSelectors}`);
+        nodes.forEach((node) => {
+          const isUser = node.matches(userSelectors);
+          const text = node.innerText.trim();
+          if (text) turns.push(`${isUser ? "User" : "Claude"}: ${text}`);
+        });
       }
     } else {
-      // ChatGPT renders each turn inside [data-message-author-role]
+      // ChatGPT renders each turn inside [data-message-author-role] — already
+      // confirmed working, left unchanged.
       const nodes = document.querySelectorAll("[data-message-author-role]");
       nodes.forEach((node) => {
         const role = node.getAttribute("data-message-author-role");
@@ -36,16 +47,9 @@
         const text = node.innerText.trim();
         if (text) turns.push(`${label}: ${text}`);
       });
-
-      // Same fallback for ChatGPT in case its selector also goes stale later.
-      if (turns.length === 0) {
-        const main = document.querySelector("main") || document.body;
-        const text = main.innerText.trim();
-        if (text) turns.push(text);
-      }
     }
 
-    return turns.join("\n\n");
+    return turns.join("\n");
   }
 
   function createButton() {

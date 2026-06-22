@@ -13,16 +13,25 @@ function safeParseJson(text: string) {
 
 export async function extractKnowledgeFromConversation(
   apiKey: string,
-  rawConversation: string
-): Promise<{ title: string; summary: string; extracted: ExtractedData }> {
+  rawConversation: string,
+  aiModel: string = "AI"
+): Promise<{
+  title: string;
+  summary: string;
+  formattedConversation: string;
+  extracted: ExtractedData;
+}> {
   const model = getModel(apiKey);
 
   const prompt = `You are a knowledge extraction AI. Analyze this AI conversation and extract structured information.
+
+The raw text below may be messy — it could come from a browser copy-paste and include unrelated page noise such as UI labels, button text, timestamps, sidebar content, usage/quota widgets, or other browser extension overlays mixed in with the real conversation. Ignore all of that noise entirely.
 
 Return ONLY valid JSON with this exact structure, no other text, no markdown backticks:
 {
   "title": "short descriptive title of what was accomplished (max 10 words)",
   "summary": "2-3 sentence summary of the conversation",
+  "formatted_conversation": "the actual conversation rewritten as clean alternating turns. Each turn starts with the speaker label followed by a colon and a space, exactly one turn per line, with NO blank lines between turns. Use 'User:' for the human's turns and '${aiModel}:' for the assistant's turns. Preserve the original wording of the real conversation faithfully — do not summarize, shorten, or paraphrase it. Only remove text that is clearly page noise, not part of the actual dialogue.",
   "extracted": {
     "decisions": ["list of decisions made"],
     "features": ["list of features discussed or built"],
@@ -39,7 +48,7 @@ Return ONLY valid JSON with this exact structure, no other text, no markdown bac
 
 If a category has nothing relevant, return an empty array for it. Never omit a key.
 
-CONVERSATION:
+RAW TEXT:
 ${rawConversation}`;
 
   const result = await model.generateContent(prompt);
@@ -49,6 +58,7 @@ ${rawConversation}`;
   return {
     title: parsed.title || "Untitled session",
     summary: parsed.summary || "",
+    formattedConversation: parsed.formatted_conversation || rawConversation,
     extracted: {
       decisions: parsed.extracted?.decisions || [],
       features: parsed.extracted?.features || [],

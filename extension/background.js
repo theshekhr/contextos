@@ -1,8 +1,8 @@
 const API_BASE = "https://contextos-xi.vercel.app";
 
 async function getStoredAuth() {
-  const data = await chrome.storage.local.get(["token", "activeProjectId"]);
-  return { token: data.token || null, activeProjectId: data.activeProjectId || null };
+  const data = await chrome.storage.local.get(["extensionToken", "activeProjectId"]);
+  return { token: data.extensionToken || null, activeProjectId: data.activeProjectId || null };
 }
 
 async function apiFetch(path, options = {}) {
@@ -57,7 +57,7 @@ async function handleCapture(payload, tabId) {
   }
 
   if (!activeProjectId) {
-    chrome.tabs.sendMessage(tabId, { type: "SAVE_ERROR", error: "Pick a project in the extension popup first." });
+    chrome.tabs.sendMessage(tabId, { type: "SAVE_ERROR", error: "Open the extension popup and pick a project first." });
     return;
   }
 

@@ -137,12 +137,15 @@ async function loadMainScreen(token, email) {
 
     if (res.status === 401) {
       // Token expired or revoked
-      await chrome.storage.local.remove(['extensionToken', 'userEmail'])
+      await chrome.storage.local.remove(['extensionToken', 'userEmail', 'activeProjectId', 'activeProjectName'])
       showScreen('connect')
       return
     }
 
     const projects = await res.json()
+
+    // Check if a project was previously selected and is still valid
+    const { activeProjectId: storedProjectId } = await chrome.storage.local.get('activeProjectId')
 
     // Render project list
     const list = document.getElementById('project-list')
@@ -164,8 +167,13 @@ async function loadMainScreen(token, email) {
         list.appendChild(item)
       })
 
-      // Auto-select the first project
-      if (projects.length > 0) {
+      // Restore the previously-selected project if it still exists,
+      // otherwise fall back to the first project in the list.
+      const stillExists = projects.some(p => p.id === storedProjectId)
+      if (stillExists) {
+        const match = projects.find(p => p.id === storedProjectId)
+        selectProject(match.id, match.name)
+      } else if (projects.length > 0) {
         selectProject(projects[0].id, projects[0].name)
       }
     }
@@ -189,6 +197,10 @@ function selectProject(id, name) {
 
   // Enable save button
   document.getElementById('save-btn').disabled = false
+
+  // Persist the selection so the floating on-page button (which runs
+  // independently of this popup) knows which project to save to.
+  chrome.storage.local.set({ activeProjectId: id, activeProjectName: name })
 }
 
 // ── SAVE BUTTON ──
@@ -312,7 +324,7 @@ document.getElementById('settings-btn').addEventListener('click', () => {
 
 // ── DISCONNECT ──
 document.getElementById('disconnect-btn').addEventListener('click', async () => {
-  await chrome.storage.local.remove(['extensionToken', 'userEmail'])
+  await chrome.storage.local.remove(['extensionToken', 'userEmail', 'activeProjectId', 'activeProjectName'])
   selectedProjectId = null
   document.getElementById('token-input').value = ''
   hideStatus('connect-status')

@@ -24,16 +24,13 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const projectId = searchParams.get("project_id");
     if (!projectId) return NextResponse.json({ error: "project_id required" }, { status: 400 });
-
     const supabase = createClient();
     await assertOwnsProject(supabase, projectId, uid);
-
     const { data, error } = await supabase
       .from("memory_blocks")
       .select("*")
       .eq("project_id", projectId)
       .order("created_at", { ascending: false });
-
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json(data);
   } catch (err) {
@@ -48,14 +45,11 @@ export async function POST(request: Request) {
   try {
     const uid = await resolveUid(request);
     const body = await request.json();
-
     const supabase = createClient();
     await assertOwnsProject(supabase, body.project_id, uid);
-
     if (!body.raw_conversation || !body.raw_conversation.trim()) {
       return NextResponse.json({ error: "raw_conversation is required" }, { status: 400 });
     }
-
     let apiKey: string;
     try {
       apiKey = await getUserGeminiKey(uid);
@@ -66,17 +60,19 @@ export async function POST(request: Request) {
       throw err;
     }
 
-    const { title, summary, extracted } = await extractKnowledgeFromConversation(
-      apiKey,
-      body.raw_conversation
-    );
+    const aiModel = body.ai_model || "AI";
+
+    const { title, summary, formattedConversation, extracted } =
+      await extractKnowledgeFromConversation(apiKey, body.raw_conversation, aiModel);
 
     const { data: memory, error: memoryError } = await supabase
       .from("memory_blocks")
       .insert({
         project_id: body.project_id,
-        ai_model: body.ai_model || "Unknown",
-        raw_conversation: body.raw_conversation,
+        ai_model: aiModel,
+        // Store the Gemini-cleaned transcript instead of the raw paste,
+        // falling back to the original text if cleaning produced nothing.
+        raw_conversation: formattedConversation || body.raw_conversation,
         title,
         summary,
         extracted_data: extracted,
