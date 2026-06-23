@@ -17,6 +17,57 @@ export const geminiProvider: AiProvider = {
   async testKey(apiKey: string) {
     const model = getModel(apiKey);
     await model.generateContent("Say 'ok' and nothing else.");
+
+  },
+  async askQuestion(apiKey, question, relevantMemories, projectName) {
+    const model = getModel(apiKey);
+
+    if (relevantMemories.length === 0) {
+      return {
+        answer: `I don't have any saved memories for "${projectName}" yet that relate to this question. Save some AI conversations first, then ask again.`,
+        citedMemoryIds: [],
+      };
+    }
+
+    const memoryContext = relevantMemories
+      .map(
+        (m) => `[MEMORY ID: ${m.id}]
+Date: ${new Date(m.created_at).toLocaleString()}
+AI used: ${m.ai_model}
+Title: ${m.title}
+Summary: ${m.summary}
+Decisions: ${m.extracted_data.decisions?.join("; ") || "none"}
+Features: ${m.extracted_data.features?.join("; ") || "none"}
+Bugs: ${m.extracted_data.bugs?.join("; ") || "none"}
+Fixes: ${m.extracted_data.bugfixes?.join("; ") || "none"}
+Code: ${m.extracted_data.code_snippets?.join("; ") || "none"}`
+      )
+      .join("\n\n");
+
+    const prompt = `You are a helpful assistant answering questions about the project "${projectName}" using only the memories provided below. These are saved AI conversations from the user's past work sessions.
+
+MEMORIES:
+${memoryContext}
+
+QUESTION: ${question}
+
+Answer the question directly and specifically using only information found in these memories. If the memories mention dates or relative timing (e.g. "yesterday", a date), use that to answer "when" questions precisely. If the answer isn't in these memories, say so honestly rather than guessing.
+
+Return ONLY valid JSON, no markdown backticks, no other text:
+{
+  "answer": "your direct answer to the question, 2-4 sentences, conversational tone",
+  "citedMemoryIds": ["the MEMORY ID values you actually used to answer, e.g. the literal ids from the brackets above"]
+}`;
+
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
+    const cleaned = text.replace(/```json|```/g, "").trim();
+    const parsed = JSON.parse(cleaned);
+
+    return {
+      answer: parsed.answer || "I couldn't generate an answer from the available memories.",
+      citedMemoryIds: parsed.citedMemoryIds || [],
+    };
   },
 
   async extractKnowledge(apiKey, rawConversation, aiModel) {

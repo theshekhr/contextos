@@ -16,27 +16,36 @@ const CATEGORY_STYLES: Record<string, { label: string; bg: string; text: string;
   questions: { label: "question", bg: "rgba(255,255,255,0.04)", text: "#888888", border: "rgba(255,255,255,0.08)" },
 };
 
-const LABEL_TO_KEY: Record<string, keyof MemoryBlockType["extracted_data"]> = {
-  decision: "decisions",
-  feature: "features",
-  bug: "bugs",
-  bugfix: "bugfixes",
-  code: "code_snippets",
-  todo: "todos",
-};
-
-export default function MemoryBlock({ memory }: { memory: MemoryBlockType }) {
+export default function MemoryBlock({
+  memory,
+  onDelete,
+}: {
+  memory: MemoryBlockType;
+  onDelete: (id: string) => void;
+}) {
   const [expanded, setExpanded] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const activeCategories = Object.entries(CATEGORY_STYLES).filter(
     ([key]) => memory.extracted_data?.[key as keyof typeof memory.extracted_data]?.length > 0
   );
 
+  async function handleDelete(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!confirm("Delete this memory? This can't be undone.")) return;
+    setDeleting(true);
+    try {
+      onDelete(memory.id);
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   return (
     <div
       className={`rounded-[6px] border bg-[var(--bg2)] transition ${
         expanded ? "border-[var(--text3)]" : "border-[var(--border)] hover:border-[var(--border2)]"
-      }`}
+      } ${deleting ? "opacity-40" : ""}`}
     >
       <button
         onClick={() => setExpanded((e) => !e)}
@@ -60,6 +69,16 @@ export default function MemoryBlock({ memory }: { memory: MemoryBlockType }) {
               {new Date(memory.created_at).toLocaleString()}
             </p>
           </div>
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            className="flex-shrink-0 rounded-[4px] p-1.5 text-[var(--text3)] transition hover:bg-[var(--red)]/10 hover:text-[var(--red)]"
+            title="Delete memory"
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2 4h12M5.5 4V2.5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1V4M6.5 7.5v4M9.5 7.5v4M3.5 4l.5 9a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l.5-9" />
+            </svg>
+          </button>
         </div>
 
         {activeCategories.length > 0 && (

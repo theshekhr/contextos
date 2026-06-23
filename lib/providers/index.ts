@@ -105,3 +105,28 @@ export async function updateKnowledgeGraphWithFallback(
   const data = await fallbackProvider.updateKnowledgeGraph("", existingData, newMemory);
   return { data, degraded: true };
 }
+export async function askQuestionWithFallback(
+  config: UserProviderConfig,
+  question: string,
+  relevantMemories: Parameters<AiProvider["askQuestion"]>[2],
+  projectName: string
+): Promise<{ answer: string; citedMemoryIds: string[]; providerUsed: string; degraded: boolean }> {
+  const order: ProviderName[] = config.preferredProvider === "groq" ? ["groq", "gemini"] : ["gemini", "groq"];
+
+  for (const providerName of order) {
+    const key = keyFor(config, providerName);
+    if (!key) continue;
+
+    try {
+      const provider = getProvider(providerName);
+      const result = await provider.askQuestion(key, question, relevantMemories, projectName);
+      return { ...result, providerUsed: provider.name, degraded: false };
+    } catch (err) {
+      console.error(`[${providerName}] askQuestion failed, trying next option:`, err instanceof Error ? err.message : err);
+      continue;
+    }
+  }
+
+  const result = await fallbackProvider.askQuestion("", question, relevantMemories, projectName);
+  return { ...result, providerUsed: fallbackProvider.name, degraded: true };
+}

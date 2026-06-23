@@ -6,11 +6,14 @@ import { apiGet } from "@/lib/api-client";
 import AILauncher from "@/components/workspace/AILauncher";
 import Timeline from "@/components/workspace/Timeline";
 import GraphView from "@/components/workspace/GraphView";
+import ChatTab from "@/components/workspace/ChatTab";
 import KnowledgePanel from "@/components/workspace/KnowledgePanel";
 import ResizablePanel from "@/components/workspace/ResizablePanel";
 import SwitchContextModal from "@/components/workspace/SwitchContextModal";
 import AddMemoryModal from "@/components/workspace/AddMemoryModal";
 import type { Project, MemoryBlock, KnowledgeGraph } from "@/lib/types";
+
+type ViewMode = "timeline" | "graph" | "chat";
 
 export default function ProjectWorkspacePage() {
   const { id } = useParams<{ id: string }>();
@@ -23,7 +26,7 @@ export default function ProjectWorkspacePage() {
   const [error, setError] = useState("");
   const [showSwitchContext, setShowSwitchContext] = useState(false);
   const [showAddMemory, setShowAddMemory] = useState(false);
-  const [view, setView] = useState<"timeline" | "graph">("timeline");
+  const [view, setView] = useState<ViewMode>("timeline");
 
   async function loadKnowledge() {
     try {
@@ -56,6 +59,11 @@ export default function ProjectWorkspacePage() {
 
   function handleMemoryCreated(memory: MemoryBlock) {
     setMemories((prev) => [memory, ...prev]);
+    loadKnowledge();
+  }
+
+  function handleMemoryDeleted(deletedId: string) {
+    setMemories((prev) => prev.filter((m) => m.id !== deletedId));
     loadKnowledge();
   }
 
@@ -113,6 +121,14 @@ export default function ProjectWorkspacePage() {
             >
               Graph
             </button>
+            <button
+              onClick={() => setView("chat")}
+              className={`rounded-[4px] px-2.5 py-1 text-[11px] font-medium transition ${
+                view === "chat" ? "bg-[var(--bg4)] text-[var(--text)]" : "text-[var(--text3)]"
+              }`}
+            >
+              Chat
+            </button>
           </div>
 
           <div className="flex flex-shrink-0 items-center gap-1.5">
@@ -145,12 +161,22 @@ export default function ProjectWorkspacePage() {
           </div>
         )}
 
-        <div className={view === "timeline" ? "flex-1 overflow-y-auto px-5 py-4" : "flex-1 overflow-hidden"}>
-          {view === "timeline" ? (
-            <Timeline memories={memories} />
-          ) : (
+        <div
+          className={
+            view === "timeline"
+              ? "flex-1 overflow-y-auto px-5 py-4"
+              : view === "chat"
+              ? "flex-1 overflow-hidden"
+              : "flex-1 overflow-hidden"
+          }
+        >
+          {view === "timeline" && (
+            <Timeline memories={memories} onMemoryDeleted={handleMemoryDeleted} />
+          )}
+          {view === "graph" && (
             <GraphView memories={memories} knowledge={knowledge?.data || null} />
           )}
+          {view === "chat" && <ChatTab projectId={id} memories={memories} />}
         </div>
       </div>
 

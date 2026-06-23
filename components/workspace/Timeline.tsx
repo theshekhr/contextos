@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import MemoryBlock from "./MemoryBlock";
+import { apiDelete } from "@/lib/api-client";
 import type { MemoryBlock as MemoryBlockType } from "@/lib/types";
 
 const FILTERS = [
@@ -11,7 +12,13 @@ const FILTERS = [
   { key: "code_snippets", label: "Code" },
 ] as const;
 
-export default function Timeline({ memories }: { memories: MemoryBlockType[] }) {
+export default function Timeline({
+  memories,
+  onMemoryDeleted,
+}: {
+  memories: MemoryBlockType[];
+  onMemoryDeleted: (id: string) => void;
+}) {
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
 
@@ -28,6 +35,15 @@ export default function Timeline({ memories }: { memories: MemoryBlockType[] }) 
       return true;
     });
   }, [memories, search, activeFilter]);
+
+  async function handleDelete(id: string) {
+    try {
+      await apiDelete(`/api/memories/${id}`);
+      onMemoryDeleted(id);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to delete memory");
+    }
+  }
 
   return (
     <div>
@@ -67,7 +83,7 @@ export default function Timeline({ memories }: { memories: MemoryBlockType[] }) 
         {filtered.length === 0 && (
           <p className="text-[13px] text-[var(--text3)]">
             {memories.length === 0
-              ? "No memories yet. Use an AI tool above, then save the conversation with the Daruka extension."
+              ? "No memories yet. Use an AI tool above, then save the conversation with the ContextOS extension."
               : "No memories match your search or filter."}
           </p>
         )}
@@ -82,7 +98,7 @@ export default function Timeline({ memories }: { memories: MemoryBlockType[] }) 
                     : "border-[var(--border2)] bg-[var(--bg)]"
                 }`}
               />
-              <MemoryBlock memory={memory} />
+              <MemoryBlock memory={memory} onDelete={handleDelete} />
             </div>
           ))}
         </div>

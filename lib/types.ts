@@ -47,3 +47,11 @@ export type KnowledgeData = {
   ideas: string[]
   architecture: string[]
 }
+export type ChatMessage = {
+  id: string
+  project_id: string
+  role: "user" | "assistant"
+  content: string
+  cited_memory_ids: string[]
+  created_at: string
+}

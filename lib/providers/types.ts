@@ -18,6 +18,20 @@ export type KnowledgeGraphData = {
   architecture: string[];
 };
 
+export type ChatAnswer = {
+  answer: string;
+  citedMemoryIds: string[];
+};
+
+export type ChatContextMemory = {
+  id: string;
+  title: string;
+  summary: string;
+  ai_model: string;
+  created_at: string;
+  extracted_data: ExtractedData;
+};
+
 export interface AiProvider {
   name: string;
   extractKnowledge(apiKey: string, rawConversation: string, aiModel: string): Promise<ExtractionResult>;
@@ -38,6 +52,12 @@ export interface AiProvider {
     existingData: KnowledgeGraphData,
     newMemory: { title: string; summary: string; extracted_data: ExtractedData }
   ): Promise<KnowledgeGraphData>;
+  askQuestion(
+    apiKey: string,
+    question: string,
+    relevantMemories: ChatContextMemory[],
+    projectName: string
+  ): Promise<ChatAnswer>;
   testKey(apiKey: string): Promise<void>; // throws if invalid
 }
 

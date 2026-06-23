@@ -79,6 +79,31 @@ export const fallbackProvider: AiProvider = {
     // No key needed, always succeeds
     return;
   },
+  async askQuestion(_apiKey, question, relevantMemories, projectName) {
+    if (relevantMemories.length === 0) {
+      return {
+        answer: `I don't have any saved memories for "${projectName}" yet that relate to this question. Save some AI conversations first, then ask again.`,
+        citedMemoryIds: [],
+      };
+    }
+
+    // No AI available \u2014 just surface the most relevant memories directly,
+    // since relevantMemories is already sorted by relevance upstream.
+    const top = relevantMemories.slice(0, 3);
+    const lines = top.map((m) => {
+      const date = new Date(m.created_at).toLocaleDateString();
+      return `\u2022 ${date} (${m.ai_model}): ${m.title} \u2014 ${m.summary}`;
+    });
+
+    const answer = `I found ${top.length} session${top.length === 1 ? "" : "s"} in "${projectName}" that might answer this (rule-based search, no AI used):\n\n${lines.join(
+      "\n"
+    )}\n\nOpen these in the Timeline for full details \u2014 add an AI provider key in Settings for direct answers instead of a list.`;
+
+    return {
+      answer,
+      citedMemoryIds: top.map((m) => m.id),
+    };
+  },
 
   async extractKnowledge(_apiKey, rawConversation, aiModel) {
     const turns = splitIntoTurns(rawConversation);
