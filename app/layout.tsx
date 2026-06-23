@@ -18,7 +18,11 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: "Daruka",
-  description: "The institutional memory layer for AI tools",
+  description: "Your project's second brain. Save AI conversations as persistent memory across every model.",
+  icons: {
+    icon: "/icon.png",
+    shortcut: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
